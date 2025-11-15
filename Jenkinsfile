@@ -59,16 +59,19 @@ pipeline {
         // Siempre se ejecuta al final del pipeline
         always {
             echo 'Archivando artefactos generados (JAR/WAR)...'
-            // ARCHIVAR ARTEFACTO: Guarda el JAR en Jenkins (para evidencia)
-            archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+            // CORRECCIÓN: Usamos 'script' para forzar el contexto de ejecución
+            script {
+                // ARCHIVAR ARTEFACTO: Guarda el JAR en Jenkins (para evidencia)
+                archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+            }
         }
 
         // Se ejecuta si TODAS las etapas anteriores fueron exitosas
         success {
             echo 'Pipeline CI/CD completado exitosamente. Enviando notificación.'
             // NOTIFICACIÓN DE ÉXITO: Implementación de envío de correo
-            mail to: 'christopher.velezpul@ug.edu.ec', 
-                 subject: "Éxito CI/CD: ${env.JOB_NAME} #${env.BUILD_NUMBER}", 
+            mail to: 'christopher.velezpul@ug.edu.ec',
+                 subject: "Éxito CI/CD: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                  body: "El Pipeline CI/CD se ejecutó exitosamente. Revisa la consola: ${env.BUILD_URL}"
         }
 
@@ -77,8 +80,8 @@ pipeline {
             echo 'Pipeline FALLÓ. Enviando notificación de error.'
             // NOTIFICACIÓN DE FALLO: Implementación de envío de correo
             mail to: 'christopher.velezpul@ug.edu.ec', // << AJUSTAR CORREO
-                 subject: "FALLO CI/CD: ${env.JOB_NAME} #${env.BUILD_NUMBER}", 
+                 subject: "FALLO CI/CD: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                  body: "¡Alerta! El Pipeline CI/CD falló. Revisa los logs en: ${env.BUILD_URL}"
         }
     }
-}
+} 
