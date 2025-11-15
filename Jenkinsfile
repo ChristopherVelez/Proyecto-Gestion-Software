@@ -1,16 +1,9 @@
 // Jenkinsfile (Pipeline Declarativo)
 
 pipeline {
-    // 1. Configuración del Agente (Usamos Docker con JDK para estandarizar el ambiente)
-    agent {
-        // CORRECCIÓN: Estructura estandarizada del agente Docker
-        docker { 
-            // Imagen de Maven para compilar y probar
-            image 'maven:latest' 
-            // Mapea el volumen Maven local para reutilizar dependencias (caché)
-            args '-v /root/.m2:/root/.m2' 
-        }
-    }
+    // 1. Configuración del Agente: USAR EL NODO PRINCIPAL. 
+    // Esto soluciona el error 'Invalid agent type' y el error 'docker: not found'
+    agent any 
 
     // 2. Definición de las Etapas del Pipeline
     stages {
@@ -18,7 +11,6 @@ pipeline {
         stage('Build & Package') {
             steps {
                 echo 'Iniciando la compilación y empaquetado del código (saltando pruebas).'
-                // Usamos -DskipTests para controlar la ejecución de pruebas en la siguiente etapa
                 sh 'mvn -B clean package -DskipTests'
             }
         }
@@ -41,18 +33,16 @@ pipeline {
         stage('Deploy') {
             steps {
                 echo 'Generando imagen Docker y desplegando en entorno de prueba.'
-                script {
-                    // Crea la imagen usando el Dockerfile de la raíz
-                    def dockerImage = docker.build("proyecto-gcs:${env.BUILD_NUMBER}")
-                    
-                    // Detiene y elimina cualquier contenedor previo con el mismo nombre para evitar conflictos
-                    sh 'docker stop proyecto-gcs-running || true'
-                    sh 'docker rm proyecto-gcs-running || true'
-                    
-                    // Despliega el contenedor en modo 'detached' (-d) y mapea el puerto 8080
-                    dockerImage.run("-d -p 8080:8080 --name proyecto-gcs-running")
-                    echo "Despliegue completado. Contenedor 'proyecto-gcs-running' corriendo en el puerto 8080."
-                }
+                // Usamos comandos SH directo, ya que 'agent any' da acceso al host Docker
+                sh 'docker build -t proyecto-gcs-image:${env.BUILD_NUMBER} .'
+                
+                // Detiene y elimina cualquier contenedor previo con el mismo nombre para evitar conflictos
+                sh 'docker stop proyecto-gcs-running || true'
+                sh 'docker rm proyecto-gcs-running || true'
+                
+                // Despliega el contenedor en modo 'detached' (-d) y mapea el puerto 8080
+                sh 'docker run -d -p 8080:8080 --name proyecto-gcs-running proyecto-gcs-image:${env.BUILD_NUMBER}'
+                echo "Despliegue completado. Contenedor 'proyecto-gcs-running' corriendo en el puerto 8080."
             }
         }
     }
@@ -62,10 +52,8 @@ pipeline {
         // Siempre se ejecuta al final del pipeline
         always {
             echo 'Archivando artefactos generados (JAR/WAR)...'
-            script {
-                // ARCHIVAR ARTEFACTO: Guarda el JAR en Jenkins (para evidencia)
-                archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
-            }
+            // Ya que usamos 'agent any', el contexto FilePath está disponible.
+            archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
         }
 
         // Se ejecuta si TODAS las etapas anteriores fueron exitosas
