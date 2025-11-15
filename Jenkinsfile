@@ -5,7 +5,7 @@ pipeline {
     agent {
     docker {
         // Imagen de Maven con JDK 21 para compilar y probar
-        image 'maven:3-jdk-21' // ¡CORREGIDO!
+       image 'maven:3-jdk-17'
         // Caché local de Maven para descargas más rápidas
         args '-v /root/.m2:/root/.m2' 
     }
