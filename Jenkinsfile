@@ -3,13 +3,13 @@
 pipeline {
     // 1. Configuración del Agente (Usamos Docker con JDK 24 para estandarizar el ambiente)
     agent {
-        docker {
-            // Imagen de Maven con JDK 24 para compilar y probar
-            image 'maven:3-openjdk-23' 
-            // Caché local de Maven para descargas más rápidas
-            args '-v /root/.m2:/root/.m2' 
-        }
+    docker {
+        // Imagen de Maven con JDK 21 para compilar y probar
+        image 'maven:3-openjdk-21' // ¡CORREGIDO!
+        // Caché local de Maven para descargas más rápidas
+        args '-v /root/.m2:/root/.m2' 
     }
+}
 
     // 2. Definición de las Etapas del Pipeline
     stages {
