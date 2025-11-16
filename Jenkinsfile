@@ -51,25 +51,25 @@ pipeline {
     }
 
     // 2. Automatización: Notificaciones por Email
-    post {
-        success {
-            echo "Pipeline completado correctamente. Enviando notificación a Christopher."
-            mail(
-                to: 'christopher.velezpul@ug.edu.ec',
-                subject: "✅ ÉXITO: Pipeline ${env.JOB_NAME} Build #${env.BUILD_NUMBER}",
-                body: "El proceso CI/CD fue exitoso. Artefacto desplegado. Revisar: ${env.BUILD_URL}"
-            )
-        }
-        failure {
-            echo "Pipeline falló. Enviando alerta a Christopher."
-            mail(
-                to: 'christopher.velezpul@ug.edu.ec',
-                subject: "❌ FALLO: Pipeline ${env.JOB_NAME} Build #${env.BUILD_NUMBER}",
-                body: "El pipeline falló en la etapa ${env.STAGE_NAME}. Por favor, revisa en: ${env.BUILD_URL}"
-            )
-        }
-        always {
-            echo "Pipeline finalizado."
-        }
-    }
+ //   post {
+   //     success {
+     //       echo "Pipeline completado correctamente. Enviando notificación a Christopher."
+       //     mail(
+         //       to: 'christopher.velezpul@ug.edu.ec',
+           //     subject: "✅ ÉXITO: Pipeline ${env.JOB_NAME} Build #${env.BUILD_NUMBER}",
+             //   body: "El proceso CI/CD fue exitoso. Artefacto desplegado. Revisar: ${env.BUILD_URL}"
+  //          )
+    //    }
+      //  failure {
+        //    echo "Pipeline falló. Enviando alerta a Christopher."
+          //  mail(
+            //    to: 'christopher.velezpul@ug.edu.ec',
+              //  subject: "❌ FALLO: Pipeline ${env.JOB_NAME} Build #${env.BUILD_NUMBER}",
+                //body: "El pipeline falló en la etapa ${env.STAGE_NAME}. Por favor, revisa en: ${env.BUILD_URL}"
+     //       )
+       // }
+       // always {
+   //         echo "Pipeline finalizado."
+  //      }
+    //}
 }
