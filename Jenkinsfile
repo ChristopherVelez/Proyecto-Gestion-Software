@@ -13,16 +13,15 @@ pipeline {
     stages {
         // ETAPA 1: Build (Compilación)
         stage('Build') { 
-            // Usamos un agente Docker con Maven y JDK 21 (compatible con 24)
+            // Usamos un agente Docker para obtener 'mvn' y JDK
             agent {
                 docker {
-                    image 'maven:3.9.6-openjdk-21' // Imagen compatible con Maven 3.9 y JDK 24
-                    args '-v $HOME/.m2:/root/.m2' // Caching de dependencias
+                    image 'maven:3.9.6-openjdk-21' 
+                    args '-v $HOME/.m2:/root/.m2' 
                 }
             }
             steps { 
                 echo 'Iniciando compilación...' 
-                // Los comandos mvn se ejecutan dentro del contenedor temporal de Maven
                 sh 'mvn -B clean package -DskipTests' 
             } 
         }
@@ -39,7 +38,6 @@ pipeline {
             steps { 
                 echo 'Ejecutando pruebas...' 
                 sh 'mvn test' 
-                // Asegúrate de que los reportes se publiquen
                 junit 'target/surefire-reports/*.xml' 
             } 
         }
@@ -62,16 +60,16 @@ pipeline {
         always { archiveArtifacts artifacts: "target/${ARTIFACT_FILE}", fingerprint: true }
         
         success { 
-            mail to: 'tu.correo@ejemplo.com', 
-                 subject: "Éxito CI/CD: ${env.JOB_NAME}", 
+            mail to: 'tu.correo@ejemplo.com', // << ACTUALIZAR CORREO
+                 subject: "Éxito CI/CD: ${env.JOB_NAME} #${env.BUILD_NUMBER}", 
                  body: "Pipeline ejecutado exitosamente. URL: ${env.BUILD_URL}"
         }
         
         failure { 
-            // FIX: Se elimina la referencia a 'currentBuild.stage' para evitar MissingPropertyException
-            mail to: 'tu.correo@ejemplo.com', 
-                 subject: "FALLO CI/CD: ${env.JOB_NAME} - Falló la Etapa ${currentBuild.stagesWith)//.last().name}", 
-                 body: "El Pipeline falló. Revisa los logs en: ${env.BUILD_URL}"
+            // FIX FINAL: Cuerpo del mensaje simplificado para evitar errores de sintaxis Groovy.
+            mail to: 'tu.correo@ejemplo.com', // << ACTUALIZAR CORREO
+                 subject: "FALLO CI/CD: ${env.JOB_NAME} #${env.BUILD_NUMBER}", 
+                 body: "¡ALERTA! El Pipeline falló en una etapa. Revisa los logs en: ${env.BUILD_URL}"
         }
     }
 }
