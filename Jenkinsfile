@@ -3,8 +3,9 @@ pipeline {
     
     // 1. Configuración de Herramientas: Asume que 'M3' está configurado en Global Tool Configuration
     tools {
-        maven 'M3' 
-    }
+    maven 'M3' 
+    jdk 'JDK_23' 
+}
 
     stages {
         // Build: Compila el código
