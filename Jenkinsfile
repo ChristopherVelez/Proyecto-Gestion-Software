@@ -1,75 +1,60 @@
-// Jenkinsfile
-
 pipeline {
-    // El agente principal (any) solo se usará para el Checkout y las post-acciones
-    agent any 
-
-    environment {
-        CONTAINER_NAME = "proyecto-ci-cd-running"
-        ARTIFACT_FILE = "app-1.0-SNAPSHOT.jar"
-        DOCKER_IMAGE = "proyecto-ci-cd:${env.BUILD_NUMBER}" 
+    agent {
+        docker {
+            image 'maven:3.9.6-eclipse-temurin-17'
+            args '-v /var/run/docker.sock:/var/run/docker.sock'
+        }
     }
 
     stages {
-        // ETAPA 1: Build (Compilación)
-        stage('Build') { 
-            // Usamos un agente Docker para obtener 'mvn' y JDK
-            agent {
-                docker {
-                    image 'maven:3.9.6-openjdk-21' 
-                    args '-v $HOME/.m2:/root/.m2' 
-                }
-            }
-            steps { 
-                echo 'Iniciando compilación...' 
-                sh 'mvn -B clean package -DskipTests' 
-            } 
-        }
-        
-        // ETAPA 2: Test (Pruebas Unitarias)
-        stage('Test') { 
-            // Reutiliza el mismo agente Docker
-            agent {
-                docker {
-                    image 'maven:3.9.6-openjdk-21'
-                    args '-v $HOME/.m2:/root/.m2'
-                }
-            }
-            steps { 
-                echo 'Ejecutando pruebas...' 
-                sh 'mvn test' 
-                junit 'target/surefire-reports/*.xml' 
-            } 
-        }
-        
-        // ETAPA 3: Deploy (Despliegue con Docker)
-        // Usa el agente principal (any) para acceder al motor Docker del Host
-        stage('Deploy') { 
+        stage('Checkout') {
             steps {
-                echo 'Desplegando en Docker.'
-                sh "docker build -t ${DOCKER_IMAGE} ."
-                sh "docker stop ${CONTAINER_NAME} || true" 
-                sh "docker rm ${CONTAINER_NAME} || true"  
-                sh "docker run -d -p 8080:8080 --name ${CONTAINER_NAME} ${DOCKER_IMAGE}"
+                git branch: 'main', url: 'https://github.com/TU_USUARIO/TU_REPO.git'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh 'mvn clean compile'
+            }
+        }
+
+        stage('Test') {
+            steps {
+                sh 'mvn test'
+            }
+            post {
+                always {
+                    junit '**/target/surefire-reports/*.xml'
+                }
+            }
+        }
+
+        stage('Package') {
+            steps {
+                sh 'mvn package -DskipTests'
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                sh 'docker build -t mi-app-java:latest .'
+                sh 'docker stop mi-app-java || true'
+                sh 'docker rm mi-app-java || true'
+                sh 'docker run -d --name mi-app-java -p 8081:8080 mi-app-java:latest'
             }
         }
     }
 
-    // Notificaciones
     post {
-        always { archiveArtifacts artifacts: "target/${ARTIFACT_FILE}", fingerprint: true }
-        
-        success { 
-            mail to: 'tu.correo@ejemplo.com', // << ACTUALIZAR CORREO
-                 subject: "Éxito CI/CD: ${env.JOB_NAME} #${env.BUILD_NUMBER}", 
-                 body: "Pipeline ejecutado exitosamente. URL: ${env.BUILD_URL}"
+        success {
+            echo 'Pipeline completado exitosamente.'
         }
-        
-        failure { 
-            // FIX FINAL: Cuerpo del mensaje simplificado para evitar errores de sintaxis Groovy.
-            mail to: 'tu.correo@ejemplo.com', // << ACTUALIZAR CORREO
-                 subject: "FALLO CI/CD: ${env.JOB_NAME} #${env.BUILD_NUMBER}", 
-                 body: "¡ALERTA! El Pipeline falló en una etapa. Revisa los logs en: ${env.BUILD_URL}"
+        failure {
+            echo 'Pipeline falló.'
+        }
+        always {
+            echo 'Pipeline finalizado.'
         }
     }
 }
