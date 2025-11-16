@@ -1,88 +1,49 @@
-// Jenkinsfile (Pipeline Declarativo)
+// Jenkinsfile
 
 pipeline {
-    // Agente Principal: Usar el nodo base de Jenkins. 
-    // Esto asegura que las etapas que lo necesiten (Deploy, Post-Actions) 
-    // se ejecuten donde está el contexto del FilePath y el Docker Socket mapeado.
     agent any 
 
-    // 2. Definición de las Etapas del Pipeline
+    environment {
+        CONTAINER_NAME = "proyecto-ci-cd-running"
+        ARTIFACT_FILE = "app-1.0-SNAPSHOT.jar"
+        // Nombre de la imagen Docker a crear
+        DOCKER_IMAGE = "proyecto-ci-cd:${env.BUILD_NUMBER}" 
+    }
+
     stages {
-        
-        // ETAPA 1: BUILD (Compilación y Empaquetado)
-        stage('Build & Package') {
-            // Agente local: Usar la imagen de Maven para obtener el comando 'mvn'.
-            agent {
-                docker {
-                    image 'maven:latest'
-                    args '-v /root/.m2:/root/.m2' // Caché de dependencias
-                }
-            }
-            steps {
-                echo 'Iniciando la compilación y empaquetado del código (saltando pruebas).'
-                sh 'mvn -B clean package -DskipTests'
-            }
+        stage('Build') { steps { echo 'Iniciando compilación...' ; sh 'mvn -B clean package -DskipTests' } }
+        stage('Test') { 
+            steps { 
+                echo 'Ejecutando pruebas...' ; sh 'mvn test' ; 
+                junit 'target/surefire-reports/*.xml' 
+            } 
         }
-
-        // ETAPA 2: TEST (Ejecución de pruebas unitarias)
-        stage('Test') {
-            // Agente local: Usar la imagen de Maven.
-            agent {
-                docker {
-                    image 'maven:latest'
-                    args '-v /root/.m2:/root/.m2'
-                }
-            }
+        stage('Deploy') { 
             steps {
-                echo 'Ejecutando pruebas unitarias con JUnit...'
-                sh 'mvn test'
-            }
-            post {
-                always {
-                    // El contexto FilePath está disponible dentro del contenedor Docker
-                    junit 'target/surefire-reports/*.xml'
-                }
-            }
-        }
-
-        // ETAPA 3: DEPLOY (Despliegue en entorno de prueba con Docker)
-        stage('Deploy') {
-            // NO se especifica agente aquí. Hereda 'agent any' y tiene acceso al Docker host.
-            steps {
-                echo 'Generando imagen Docker y desplegando en entorno de prueba.'
-                
-                // Usamos comandos SH directo, que acceden al host Docker daemon
-                sh 'docker build -t proyecto-gcs-image:${env.BUILD_NUMBER} .'
-                
-                sh 'docker stop proyecto-gcs-running || true'
-                sh 'docker rm proyecto-gcs-running || true'
-                
-                sh 'docker run -d -p 8080:8080 --name proyecto-gcs-running proyecto-gcs-image:${env.BUILD_NUMBER}'
-                echo "Despliegue completado. Contenedor 'proyecto-gcs-running' corriendo en el puerto 8080."
+                echo 'Desplegando en Docker.'
+                // 1. Construir la imagen
+                sh "docker build -t ${DOCKER_IMAGE} ."
+                // 2. Detener y eliminar contenedor anterior
+                sh "docker stop ${CONTAINER_NAME} || true" 
+                sh "docker rm ${CONTAINER_NAME} || true"  
+                // 3. Desplegar el nuevo contenedor
+                sh "docker run -d -p 8080:8080 --name ${CONTAINER_NAME} ${DOCKER_IMAGE}"
             }
         }
     }
 
-    // 3. Post-Acciones Globales (Notificaciones y Archivo de Artefactos)
+    // Notificaciones
     post {
-        // ... (El resto del post-action se mantiene sin cambios)
-        always {
-            echo 'Archivando artefactos generados (JAR/WAR)...'
-            archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+        always { archiveArtifacts artifacts: "target/${ARTIFACT_FILE}", fingerprint: true }
+        success { 
+            mail to: 'tu.correo@ejemplo.com', // << ACTUALIZAR CORREO
+                 subject: "Éxito CI/CD: ${env.JOB_NAME}", 
+                 body: "Pipeline ejecutado exitosamente. URL: ${env.BUILD_URL}"
         }
-
-        success {
-            echo 'Pipeline CI/CD completado exitosamente. Enviando notificación.'
-            mail to: 'christopher.velezpul@ug.edu.ec',
-                 subject: "Éxito CI/CD: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                 body: "El Pipeline CI/CD se ejecutó exitosamente. Revisa la consola: ${env.BUILD_URL}"
-        }
-
-        failure {
-            echo 'Pipeline FALLÓ. Enviando notificación de error.'
-            mail to: 'christopher.velezpul@ug.edu.ec',
-                 subject: "FALLO CI/CD: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                 body: "¡Alerta! El Pipeline CI/CD falló. Revisa los logs en: ${env.BUILD_URL}"
+        failure { 
+            mail to: 'tu.correo@ejemplo.com', // << ACTUALIZAR CORREO
+                 subject: "FALLO CI/CD: ${env.JOB_NAME}", 
+                 body: "El Pipeline falló en la etapa ${currentBuild.stage}. URL: ${env.BUILD_URL}"
         }
     }
 }
