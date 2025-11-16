@@ -1,32 +1,57 @@
 // Jenkinsfile
 
 pipeline {
+    // El agente principal (any) solo se usará para el Checkout y las post-acciones
     agent any 
 
     environment {
         CONTAINER_NAME = "proyecto-ci-cd-running"
         ARTIFACT_FILE = "app-1.0-SNAPSHOT.jar"
-        // Nombre de la imagen Docker a crear
         DOCKER_IMAGE = "proyecto-ci-cd:${env.BUILD_NUMBER}" 
     }
 
     stages {
-        stage('Build') { steps { echo 'Iniciando compilación...' ; sh 'mvn -B clean package -DskipTests' } }
-        stage('Test') { 
+        // ETAPA 1: Build (Compilación)
+        stage('Build') { 
+            // Usamos un agente Docker con Maven y JDK 21 (compatible con 24)
+            agent {
+                docker {
+                    image 'maven:3.9.6-openjdk-21' // Imagen compatible con Maven 3.9 y JDK 24
+                    args '-v $HOME/.m2:/root/.m2' // Caching de dependencias
+                }
+            }
             steps { 
-                echo 'Ejecutando pruebas...' ; sh 'mvn test' ; 
+                echo 'Iniciando compilación...' 
+                // Los comandos mvn se ejecutan dentro del contenedor temporal de Maven
+                sh 'mvn -B clean package -DskipTests' 
+            } 
+        }
+        
+        // ETAPA 2: Test (Pruebas Unitarias)
+        stage('Test') { 
+            // Reutiliza el mismo agente Docker
+            agent {
+                docker {
+                    image 'maven:3.9.6-openjdk-21'
+                    args '-v $HOME/.m2:/root/.m2'
+                }
+            }
+            steps { 
+                echo 'Ejecutando pruebas...' 
+                sh 'mvn test' 
+                // Asegúrate de que los reportes se publiquen
                 junit 'target/surefire-reports/*.xml' 
             } 
         }
+        
+        // ETAPA 3: Deploy (Despliegue con Docker)
+        // Usa el agente principal (any) para acceder al motor Docker del Host
         stage('Deploy') { 
             steps {
                 echo 'Desplegando en Docker.'
-                // 1. Construir la imagen
                 sh "docker build -t ${DOCKER_IMAGE} ."
-                // 2. Detener y eliminar contenedor anterior
                 sh "docker stop ${CONTAINER_NAME} || true" 
                 sh "docker rm ${CONTAINER_NAME} || true"  
-                // 3. Desplegar el nuevo contenedor
                 sh "docker run -d -p 8080:8080 --name ${CONTAINER_NAME} ${DOCKER_IMAGE}"
             }
         }
@@ -35,15 +60,18 @@ pipeline {
     // Notificaciones
     post {
         always { archiveArtifacts artifacts: "target/${ARTIFACT_FILE}", fingerprint: true }
+        
         success { 
-            mail to: 'tu.correo@ejemplo.com', // << ACTUALIZAR CORREO
+            mail to: 'tu.correo@ejemplo.com', 
                  subject: "Éxito CI/CD: ${env.JOB_NAME}", 
                  body: "Pipeline ejecutado exitosamente. URL: ${env.BUILD_URL}"
         }
+        
         failure { 
-            mail to: 'tu.correo@ejemplo.com', // << ACTUALIZAR CORREO
-                 subject: "FALLO CI/CD: ${env.JOB_NAME}", 
-                 body: "El Pipeline falló en la etapa ${currentBuild.stage}. URL: ${env.BUILD_URL}"
+            // FIX: Se elimina la referencia a 'currentBuild.stage' para evitar MissingPropertyException
+            mail to: 'tu.correo@ejemplo.com', 
+                 subject: "FALLO CI/CD: ${env.JOB_NAME} - Falló la Etapa ${currentBuild.stagesWith)//.last().name}", 
+                 body: "El Pipeline falló. Revisa los logs en: ${env.BUILD_URL}"
         }
     }
 }
