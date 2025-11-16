@@ -1,15 +1,11 @@
 pipeline {
-    agent {
-        docker {
-            image 'maven:3.9.6-eclipse-temurin-17'
-            args '-v /var/run/docker.sock:/var/run/docker.sock'
-        }
-    }
+    agent any
 
     stages {
+
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/TU_USUARIO/TU_REPO.git'
+                git branch: 'main', url: 'https://github.com/ChristopherVelez/Proyecto-Gestion-Software.git'
             }
         }
 
@@ -36,25 +32,25 @@ pipeline {
             }
         }
 
-        stage('Deploy') {
+        stage('Deploy (Local)') {
             steps {
-                sh 'docker build -t mi-app-java:latest .'
-                sh 'docker stop mi-app-java || true'
-                sh 'docker rm mi-app-java || true'
-                sh 'docker run -d --name mi-app-java -p 8081:8080 mi-app-java:latest'
+                echo 'Desplegando aplicación en entorno local...'
+                sh 'mkdir -p deploy'
+                sh 'cp target/*.jar deploy/'
+                echo 'Deploy realizado en carpeta /deploy (entorno de prueba)'
             }
         }
     }
 
     post {
         success {
-            echo 'Pipeline completado exitosamente.'
+            echo "Pipeline completado correctamente."
         }
         failure {
-            echo 'Pipeline falló.'
+            echo "Pipeline falló."
         }
         always {
-            echo 'Pipeline finalizado.'
+            echo "Pipeline finalizado."
         }
     }
 }
