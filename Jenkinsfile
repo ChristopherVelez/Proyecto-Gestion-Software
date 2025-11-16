@@ -1,16 +1,13 @@
-// Reemplaza 'M3' por el nombre que le diste a tu configuración de Maven en Jenkins
-@Library('jenkins-pipeline-shared-libraries') _
-
 pipeline {
     agent any
     
-    // Agregamos la configuración de Maven (asumiendo que se llama 'M3' en Global Tool Config)
+    // 1. Configuración de Herramientas: Asume que 'M3' está configurado en Global Tool Configuration
     tools {
         maven 'M3' 
     }
 
     stages {
-
+        // Build: Compila el código
         stage('Build') {
             steps {
                 echo 'Iniciando compilación...'
@@ -18,6 +15,7 @@ pipeline {
             }
         }
 
+        // Test: Ejecuta las pruebas unitarias
         stage('Test') {
             steps {
                 echo 'Ejecutando pruebas unitarias...'
@@ -25,12 +23,13 @@ pipeline {
             }
             post {
                 always {
-                    // Publica los resultados JUnit para la evidencia
+                    // Publica los resultados JUnit como evidencia
                     junit '**/target/surefire-reports/*.xml'
                 }
             }
         }
 
+        // Package: Crea el artefacto JAR/WAR
         stage('Package') {
             steps {
                 echo 'Empaquetando artefacto...'
@@ -38,10 +37,11 @@ pipeline {
             }
         }
 
+        // Deploy: Despliegue en entorno de prueba local
         stage('Deploy (Local)') {
             steps {
                 echo 'Desplegando aplicación en entorno de prueba local...'
-                // Crea la carpeta y mueve el JAR
+                // Crea la carpeta 'deploy' y mueve el JAR generado
                 sh 'mkdir -p deploy'
                 sh 'cp target/*.jar deploy/'
                 echo 'Despliegue completado en la carpeta /deploy.'
@@ -49,22 +49,22 @@ pipeline {
         }
     }
 
+    // 2. Automatización: Notificaciones por Email
     post {
-        // Ejecución de Notificaciones (Requiere configuración de Email en Jenkins)
         success {
-            echo "Pipeline completado correctamente. Enviando notificación."
+            echo "Pipeline completado correctamente. Enviando notificación a Christopher."
             mail(
-                to: 'TU_EMAIL_DE_PRUEBA@dominio.com',
+                to: 'christopher.velezpul@ug.edu.ec',
                 subject: "✅ ÉXITO: Pipeline ${env.JOB_NAME} Build #${env.BUILD_NUMBER}",
                 body: "El proceso CI/CD fue exitoso. Artefacto desplegado. Revisar: ${env.BUILD_URL}"
             )
         }
         failure {
-            echo "Pipeline falló. Enviando alerta."
+            echo "Pipeline falló. Enviando alerta a Christopher."
             mail(
-                to: 'TU_EMAIL_DE_PRUEBA@dominio.com',
+                to: 'christopher.velezpul@ug.edu.ec',
                 subject: "❌ FALLO: Pipeline ${env.JOB_NAME} Build #${env.BUILD_NUMBER}",
-                body: "El pipeline falló. Por favor, revisa la etapa ${env.STAGE_NAME} en: ${env.BUILD_URL}"
+                body: "El pipeline falló en la etapa ${env.STAGE_NAME}. Por favor, revisa en: ${env.BUILD_URL}"
             )
         }
         always {
@@ -72,8 +72,3 @@ pipeline {
         }
     }
 }
-
-
-Con este `Jenkinsfile` modificado, tu proyecto cumple con: **Build**, **Test** (con evidencia), **Deploy** (local) y **Notificaciones**.
-
-Recuerda reemplazar `TU_EMAIL_DE_PRUEBA@dominio.com` con un email funcional y asegurarte de que Jenkins tiene acceso al servidor de correo. Una vez que esto funcione, el único paso pendiente será la **Documentación (Informe Técnico)**.
