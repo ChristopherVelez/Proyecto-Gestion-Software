@@ -4,6 +4,7 @@ pipeline {
     // 1. Configuración de Herramientas: 'M3'  Debe estar configurado en Global Tool Configuration
     tools {
     maven 'M3' 
+    jdk 'JDK_23'
 }
 
     stages {
