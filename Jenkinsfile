@@ -48,14 +48,20 @@ pipeline {
             emailext(
                 to: 'waltduchi@gmail.com',
                 subject: "Build EXITOSO: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                body: "El build se completó correctamente.\nURL: ${env.BUILD_URL}"
+                body: "El build se completó correctamente.\nURL: ${env.BUILD_URL}",
+                from: 'waltduchi@gmail.com',
+                smtpUsername: 'waltduchi@gmail.com',
+                smtpPassword: credentials('gmail-app-password')
             )
-        }
+        }   
         failure {
             emailext(
                 to: 'waltduchi@gmail.com',
                 subject: "Build FALLIDO: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                body: "El build ha fallado.\nURL: ${env.BUILD_URL}"
+                body: "El build ha fallado.\nURL: ${env.BUILD_URL}",
+                from: 'waltduchi@gmail.com',
+                smtpUsername: 'waltduchi@gmail.com',
+                smtpPassword: credentials('gmail-app-password')
             )
         }
     }
