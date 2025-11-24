@@ -1,8 +1,9 @@
+//Es el bloque raíz que define todo el flujo de trabajo de CI/CD.
 pipeline {
-    agent any
+    agent any //Especifica dónde se ejecutará todo el Pipeline. any significa que Jenkins elegirá cualquier agente (nodo/ejecutor) disponible para correr el trabajo.
 
     tools {
-        maven 'M3'
+        maven 'M3' //Le dice al Pipeline que use la instalación de Maven que está configurada globalmente en Jenkins bajo el nombre de alias 'M3'.
     }
 
     stages {
@@ -10,18 +11,18 @@ pipeline {
         stage('Build') {
             steps {
                 echo 'Iniciando compilación...'
-                sh 'mvn clean compile'
+                sh 'mvn clean compile' // limpia los artefactos anteriores y copila el código
             }
         }
 
         stage('Test') {
             steps {
                 echo 'Ejecutando pruebas unitarias...'
-                sh 'mvn test'
+                sh 'mvn test' //Ejecuta el ciclo de vida test de Maven, el cual corre las pruebas unitarias.
             }
             post {
                 always {
-                    junit '**/target/surefire-reports/*.xml'
+                    junit '**/target/surefire-reports/*.xml' //toma los resultados de las pruebas unitarias y los publica para ser visualizados como reportes en Jenkins.
                 }
             }
         }
@@ -29,15 +30,15 @@ pipeline {
         stage('Package') {
             steps {
                 echo 'Empaquetando artefacto...'
-                sh 'mvn package -DskipTests'
+                sh 'mvn package -DskipTests' //Ejecuta el ciclo de vida package de Maven para crear el artefacto.
             }
         }
 
         stage('Deploy (Local)') {
             steps {
                 echo 'Desplegando aplicación en entorno de prueba local...'
-                sh 'mkdir -p deploy'
-                sh 'cp target/*.jar deploy/'
+                sh 'mkdir -p deploy' //Crea un directorio llamado deploy si no existe.
+                sh 'cp target/*.jar deploy/' //Copia el archivo .jar (el artefacto empaquetado) desde la carpeta target a la recién creada carpeta deploy.
                 echo 'Despliegue completado en la carpeta /deploy.'
             }
         }
